@@ -23,7 +23,7 @@ Add `exforth` to your dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:exforth, "~> 0.1.0"}  // or {:exforth, github: "ZeroMoonSan/ExForth"}
+    {:exforth, "~> 0.1.0"}  # or {:exforth, github: "ZeroMoonSan/ExForth"}
   ]
 end
 ```

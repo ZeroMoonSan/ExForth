@@ -13,7 +13,7 @@ var counter
 : abs dup 0 lt if negate then ;
 : factorial
   dup 1 lte if drop 1 exit then
-  dup 1- factorial mul
+  dup 1- factorial *
 ;
 
 \ Loop
@@ -33,11 +33,11 @@ var counter
 
 \ Main
 : main
-  5 square dot
-  10 20 average dot
+  5 square .
+  10 20 average .
   -7 abs dot
-  5 factorial dot
-  10 sum dot
-  1 describe-number dot
+  5 factorial .
+  10 sum .
+  1 describe-number .
 ;
 main

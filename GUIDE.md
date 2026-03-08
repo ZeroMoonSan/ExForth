@@ -21,7 +21,7 @@ use flib/math
 : square dup mul ;
 5 square  \ returns 25
 
-: greeting "Hello, World!" dot ;
+: greeting "Hello, World!" . ;
 greeting  \ prints Hello, World!
 ```
 
@@ -49,7 +49,7 @@ counter@  \ returns 10
 ```forth
 : count-up
   0 5 0 do
-    i dot
+    i .
   loop
 ;
 \ prints: 0 1 2 3 4
@@ -66,7 +66,7 @@ counter@  \ returns 10
 ```forth
 : countdown
   5 begin
-    dup dot 1-
+    dup . 1-
     dup 0 eq
   until
   drop
@@ -105,7 +105,7 @@ Call any Elixir block-form function with Forth bodies in each clause:
 ```forth
 : wait
   receive do
-    42 -> "got 42" dot
+    42 -> "got 42" .
     _  ->
   end
 ;
@@ -115,9 +115,9 @@ With timeout:
 ```forth
 : wait-or-timeout
   receive do
-    42 -> "got it" dot
+    42 -> "got it" .
   after
-    5000 -> "timeout" dot
+    5000 -> "timeout" .
   end
 ;
 ```
@@ -128,7 +128,7 @@ Define Elixir pattern-matching functions directly:
 ```forth
 ex: dup ( x -- x x ) [x | rest] = stack; [x, x | rest] ;
 ex: + ( a b -- n ) [a, b | rest] = stack; [a + b | rest] ;
-ex: dot ( x -- ) [x | rest] = stack; (IO.puts(x); rest) ;
+ex: . ( x -- ) [x | rest] = stack; (IO.puts(x); rest) ;
 ```
 
 ## Architecture

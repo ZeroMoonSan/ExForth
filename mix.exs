@@ -4,7 +4,7 @@ defmodule Exforth.MixProject do
   def project do
     [
       app: :exforth,
-      version: "0.1.0",
+      version: "0.1.1",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -33,8 +33,8 @@ defmodule Exforth.MixProject do
 
   defp package do
     [
-      files: ["lib", "core.fs", "math.fs", "README.md", "LICENSE"],
-      maintainers: ["ZeroMoonSan"],
+      files: ["lib", "config", "flib", "examples", "README.md", "GUIDE.md", "TODO.md", "WORDS.md", "mix.exs", "test", "LICENSE"],
+      maintainers: ["zeromoonsan"],
       licenses: ["MIT"],
       links: %{github: "https://github.com/ZeroMoonSan/ExForth"}
     ]
@@ -44,7 +44,10 @@ defmodule Exforth.MixProject do
     [
       main: "ExForth.App",
       extras: [
-        "README.md",
+        "README.md", 
+        "GUIDE.md", 
+        "WORDS.md",
+        "TODO.md"
       ]
     ]
   end

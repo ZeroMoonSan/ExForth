@@ -4,6 +4,6 @@ ex: + ( a b -- n ) [a, b | rest] = stack; [a + b | rest] ;
 ex: - ( a b -- n ) [a, b | rest] = stack; [a - b | rest] ;
 ex: * ( a b -- n ) [a, b | rest] = stack; [a * b | rest] ;
 ex: / ( a b -- n ) [a, b | rest] = stack; [div(b, a) | rest] ;;
-: square ( x -- x^2 ) dup mul ;
+: square ( x -- x^2 ) dup * ;
 : sqrt ( a -- a^2 ) dup *  ;
 : cube ( a -- a^3 ) dup dup * * ;
