@@ -79,13 +79,25 @@ end
 
   defp gen_natives(natives) do
     Enum.map(natives, fn [name, body] ->
-      [pattern, rest] = String.split(body, ";", parts: 2)
-      pattern = pattern |> String.trim() |> String.replace(" = stack", "")
-      result  = rest |> String.trim() |> String.trim_trailing(";") |> String.trim()
-      result  = if String.contains?(result, ";") do
-        "(#{result |> String.trim_trailing(";") |> String.trim()})"
+      body = String.trim(body)
+      {pattern, result} = if String.contains?(body, "\n") do
+        # многострочный: первая строка = pattern, остальные = result
+        lines = body |> String.split("\n") |> Enum.map(&String.trim/1)
+        [first | rest] = lines
+        [pattern, _] = String.split(first, "=", parts: 2)
+        result = rest |> Enum.join("\n  ") |> String.trim()
+        {String.trim(pattern), result}
       else
-        result
+        # однострочный: split по ;
+        [pattern, rest] = String.split(body, ";", parts: 2)
+        pattern = pattern |> String.trim() |> String.replace(" = stack", "")
+        result = rest |> String.trim() |> String.trim_trailing(";") |> String.trim()
+        result = if String.contains?(result, ";") do
+          "(#{result |> String.trim_trailing(";") |> String.trim()})"
+        else
+          result
+        end
+        {pattern, result}
       end
       "  def #{sanitize_name(name)}(#{pattern}), do: #{result}"
     end)

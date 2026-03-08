@@ -418,4 +418,92 @@ defmodule ExExForthTest do
       assert stack == [7]
     end
   end
+  describe "multiline native_decl" do
+    setup do
+      n = System.unique_integer([:positive])
+      {:ok, mod_name: "TestMod#{n}"}
+    end
+
+    test "lexer tokenizes multiline native_decl" do
+      {:ok, tokens, _, _, _, _} = ExForth.Lexer.tokenize("""
+      ex: dup ( x -- x x )
+        [x | rest] = stack;
+        [x, x | rest]
+      ;
+      """)
+      assert [{:native_decl, ["dup", body]}] = tokens
+      assert String.contains?(body, "\n")
+    end
+
+    test "multiline native generates correct function", %{mod_name: mod_name} do
+      stack = run_program("""
+      ex: dup ( x -- x x )
+        [x | rest] = stack;
+        [x, x | rest]
+      ;
+      5 dup
+      """, mod_name)
+      assert stack == [5, 5]
+    end
+
+    test "multiline native with complex body", %{mod_name: mod_name} do
+      stack = run_program("""
+      ex: + ( a b -- n )
+        [a, b | rest] = stack;
+        [a + b | rest]
+      ;
+      3 4 +
+      """, mod_name)
+      assert stack == [7]
+    end
+
+    test "multiline and singleline native coexist", %{mod_name: mod_name} do
+      stack = run_program("""
+      ex: dup ( x -- x x ) [x | rest] = stack; [x, x | rest] ;
+      ex: + ( a b -- n )
+        [a, b | rest] = stack;
+        [a + b | rest]
+      ;
+      3 dup +
+      """, mod_name)
+      assert stack == [6]
+    end
+  end
+  describe "float" do
+    setup do
+      n = System.unique_integer([:positive])
+      {:ok, mod_name: "TestMod#{n}"}
+    end
+
+    test "lexer tokenizes float" do
+      {:ok, tokens, _, _, _, _} = ExForth.Lexer.tokenize("3.14")
+      assert tokens == [push: 3.14]
+    end
+
+    test "lexer tokenizes negative float" do
+      {:ok, tokens, _, _, _, _} = ExForth.Lexer.tokenize("-1.5")
+      assert tokens == [push: -1.5]
+    end
+
+    test "push float onto stack", %{mod_name: mod_name} do
+      stack = run_program("3.14", mod_name)
+      assert stack == [3.14]
+    end
+
+    test "float arithmetic", %{mod_name: mod_name} do
+      stack = run_program("""
+      ex: + ( a b -- n ) [a, b | rest] = stack; [a + b | rest] ;
+      1.5 2.5 +
+      """, mod_name)
+      assert stack == [4.0]
+    end
+
+    test "integer and float coexist", %{mod_name: mod_name} do
+      stack = run_program("""
+      ex: + ( a b -- n ) [a, b | rest] = stack; [a + b | rest] ;
+      1 2.5 +
+      """, mod_name)
+      assert stack == [3.5]
+    end
+  end
 end

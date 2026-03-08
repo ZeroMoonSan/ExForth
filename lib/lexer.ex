@@ -20,6 +20,14 @@ defmodule ExForth.Lexer do
 
   import NimbleParsec
 
+  def parse_number(s) do
+    if String.contains?(s, ".") do
+      String.to_float(s)
+    else
+      String.to_integer(s)
+    end
+  end
+
   whitespace =
     ascii_string([?\s, ?\n, ?\t, ?\r], min: 1)
     |> ignore()
@@ -42,8 +50,12 @@ defmodule ExForth.Lexer do
   number =
     optional(string("-"))
     |> ascii_string([?0..?9], min: 1)
+    |> optional(
+      string(".")
+      |> ascii_string([?0..?9], min: 1)
+    )
     |> reduce({Enum, :join, [""]})
-    |> map({String, :to_integer, []})
+    |> map({__MODULE__, :parse_number, []})
     |> unwrap_and_tag(:push)
 
   str =
@@ -131,16 +143,37 @@ defmodule ExForth.Lexer do
       ])
     )
 
-  native_decl =
+  native_body =
+    repeat(
+      lookahead_not(string("\n;"))
+      |> utf8_char([])
+    )
+    |> reduce({List, :to_string, []})
+
+  native_decl_single =
     ignore(string("ex:"))
     |> ignore(whitespace)
     |> concat(name)
-    |> ignore(whitespace)
-    |> ignore(paren_comment)
-    |> ignore(whitespace)
-    |> utf8_string([not: ?\n], min: 0)
-    |> ignore(string("\n"))
+    |> ignore(optional(utf8_string([?\s, ?\t], min: 1)))
+    |> ignore(optional(paren_comment))
+    |> ignore(optional(utf8_string([?\s, ?\t], min: 1)))
+    |> utf8_string([not: ?\n], min: 1)
+    |> ignore(choice([string("\n"), eos()]))
     |> tag(:native_decl)
+
+  native_decl_multi =
+    ignore(string("ex:"))
+    |> ignore(whitespace)
+    |> concat(name)
+    |> ignore(optional(utf8_string([?\s, ?\t], min: 1)))
+    |> ignore(optional(paren_comment))
+    |> ignore(optional(utf8_string([?\s, ?\t, ?\n, ?\r], min: 1)))
+    |> concat(native_body)
+    |> ignore(string("\n;"))
+    |> ignore(optional(string("\n")))
+    |> tag(:native_decl)
+
+  native_decl = choice([native_decl_single, native_decl_multi])
 
   user_decl =
     ignore(string(":"))
