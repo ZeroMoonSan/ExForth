@@ -38,7 +38,7 @@ counter@  \ returns 10
 -5 abs  \ returns 5
 
 : factorial
-  dup 1 lte if drop 1 exit then
+  dup 1 <= if drop 1 exit then
   dup
   1- factorial mul
 ;
@@ -119,6 +119,21 @@ With timeout:
   after
     5000 -> "timeout" .
   end
+;
+```
+
+### Inline Elixir Code
+
+Insert raw Elixir directly into the generated module or word body:
+```forth
+<{
+  require Logger
+  alias MyApp.Repo
+}>
+
+: log-something
+  <{ Logger.info("called") }>
+  42
 ;
 ```
 

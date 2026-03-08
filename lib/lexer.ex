@@ -108,11 +108,18 @@ defmodule ExForth.Lexer do
     name
     |> unwrap_and_tag(:call)
 
+  raw_elixir =
+      ignore(string("<{"))
+      |> utf8_string([not: ?}], min: 0)
+      |> ignore(string("}>"))
+      |> unwrap_and_tag(:raw_elixir
+  )
   body =
     repeat(
       lookahead_not(string(";"))
       |> choice([
         ignore(whitespace),
+        raw_elixir,
         keyword,
         number,
         str,
@@ -156,6 +163,7 @@ defmodule ExForth.Lexer do
         user_decl,
         use_decl,
         var_decl,
+        raw_elixir,
         keyword,
         number,
         str,

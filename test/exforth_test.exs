@@ -382,4 +382,40 @@ defmodule ExExForthTest do
       assert_receive :done, 1000
     end
   end
+  describe "raw elixir" do
+    test "lexer tokenizes raw_elixir block" do
+      {:ok, tokens, _, _, _, _} = ExForth.Lexer.tokenize("<{ Logger.info(\"hi\") }>")
+      assert [{:raw_elixir, " Logger.info(\"hi\") "}] = tokens
+    end
+
+    test "parser passes raw_elixir through" do
+      {:ok, tokens, _, _, _, _} = ExForth.Lexer.tokenize("<{ require Logger }>")
+      assert [{:raw_elixir, _}] = ExForth.Parser.parse(tokens)
+    end
+
+    setup do
+      n = System.unique_integer([:positive])
+      {:ok, mod_name: "TestMod#{n}"}
+    end
+
+    test "top-level raw_elixir inserted into module", %{mod_name: mod_name} do
+      stack = run_program("""
+      <{ require Logger }>
+      42
+      """, mod_name)
+      assert stack == [42]
+    end
+
+    test "raw_elixir inside word", %{mod_name: mod_name} do
+      stack = run_program("""
+      ex: + ( a b -- n ) [a, b | rest] = stack; [a + b | rest] ;
+      : add-and-log
+        <{ _ = :ok }>
+        +
+      ;
+      3 4 add-and-log
+      """, mod_name)
+      assert stack == [7]
+    end
+  end
 end

@@ -22,19 +22,21 @@ defmodule ExForth.Translator do
     case_words = for {:case_word,   name, clauses} <- tokens, do: {name, clauses}
     local_names = Enum.map(users, fn [name | _] -> name end) ++
                   Enum.map(case_words, fn {name, _} -> name end)
+    raw_top = for {:raw_elixir, code} <- tokens, do: code
     program = Enum.filter(tokens, fn
       {:native_decl, _}    -> false
       {:user_decl,   _}    -> false
       {:case_word,   _, _} -> false
       {:use,         _}    -> false
       {:var,         _}    -> false
+      {:raw_elixir,  _}    -> false
       _                    -> true
     end)
     lines = [
       "defmodule #{mod_name} do",
-      "",
       gen_uses(uses, local_names),
       "  import ExForth.Runtime, warn: false",
+      gen_raw_top(raw_top),
       "",
       gen_natives(natives),
       gen_users(users),
@@ -45,6 +47,17 @@ defmodule ExForth.Translator do
     ]
     lines |> List.flatten() |> Enum.join("\n")
   end
+
+  defp gen_raw_top([]), do: []
+  defp gen_raw_top(raws) do
+    Enum.map(raws, fn code ->
+      code
+      |> String.trim()
+      |> String.split("\n")
+      |> Enum.map(&"  #{String.trim(&1)}")
+      |> Enum.join("\n")
+    end)
+end
 
   defp gen_uses(uses, local_names) do
     Enum.map(uses, fn path ->
@@ -151,7 +164,15 @@ defmodule ExForth.Translator do
     |> List.flatten()
     |> Enum.join("\n")
   end
+
   defp gen_token(token, stack_var, indent, locals)
+  defp gen_token({:raw_elixir, code}, _stack_var, indent, _locals) do
+    code
+    |> String.trim()
+    |> String.split("\n")
+    |> Enum.map(&"#{indent}#{String.trim(&1)}")
+    |> Enum.join("\n")
+  end
   defp gen_token({:kw, :kw_inc}, stack_var, indent, _locals),
     do: "#{indent}#{stack_var} = (fn [n | r] -> [n + 1 | r] end).(#{stack_var})"
 

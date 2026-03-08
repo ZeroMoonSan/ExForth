@@ -6,20 +6,20 @@ var counter
 0 counter!
 
 \ Math
-: square dup * ;
-: average { a b } a b add 2 div_ ;
+: square ( a -- a^2 ) dup * ;
+: average ( a b -- c ){ a b } a b + 2 / ;
 
 \ Control flow
-: abs dup 0 lt if negate then ;
-: factorial
-  dup 1 lte if drop 1 exit then
+: abs ( a -- b ) dup 0 < if negate then ;
+: factorial ( a -- b )
+  dup 1 <= if drop 1 exit then
   dup 1- factorial *
 ;
 
 \ Loop
-: sum
+: sum ( a .. b c -- )
   0 swap 1+ 1 do
-    i add
+    i +
   loop
 ;
 
