@@ -78,6 +78,32 @@ defmodule ExExForthTest do
       {:ok, tokens, _, _, _, _} = ExForth.Lexer.tokenize("< > =")
       assert tokens == [call: "<", call: ">", call: "="]
     end
+
+    test "tokenizes line comment" do
+      {:ok, tokens, _, _, _, _} = ExForth.Lexer.tokenize("42 \\ this is a comment\n99")
+      assert tokens == [push: 42, push: 99]
+    end
+
+    test "tokenizes 1+ and 1-" do
+      {:ok, tokens, _, _, _, _} = ExForth.Lexer.tokenize("1+ 1-")
+      assert tokens == [kw: :kw_inc, kw: :kw_dec]
+    end
+
+    test "tokenizes then as end alias" do
+      {:ok, tokens, _, _, _, _} = ExForth.Lexer.tokenize(": test 0 > if . then ;")
+      assert [{:user_decl, ["test", _, {:call, ">"}, {:kw, :kw_if}, {:call, "."}, {:kw, :kw_end}]}] = tokens
+    end
+
+    test "tokenizes exit" do
+      {:ok, tokens, _, _, _, _} = ExForth.Lexer.tokenize(": test exit ;")
+      assert [{:user_decl, ["test", {:kw, :kw_exit}]}] = tokens
+    end
+
+    test "tokenizes case_word pattern" do
+      {:ok, tokens, _, _, _, _} = ExForth.Lexer.tokenize(": f 0 -> \"zero\" _ -> \"other\" ;")
+      assert [{:user_decl, ["f", {:push, 0}, {:kw, :kw_arrow}, {:push, "zero"},
+                            {:call, "_"}, {:kw, :kw_arrow}, {:push, "other"}]}] = tokens
+    end
   end
 
   describe "Parser" do
@@ -119,6 +145,18 @@ defmodule ExExForthTest do
     test "passes through push and call unchanged" do
       {:ok, tokens, _, _, _, _} = ExForth.Lexer.tokenize("5 dup .")
       assert ExForth.Parser.parse(tokens) == [push: 5, call: "dup", call: "."]
+    end
+
+    test "parses case_word" do
+      {:ok, tokens, _, _, _, _} = ExForth.Lexer.tokenize("""
+      : describe
+        0 -> "zero"
+        1 -> "one"
+        _ -> "many"
+      ;
+      """)
+      assert [{:case_word, "describe", [{"0", _}, {"1", _}, {"_", _}]}] =
+        ExForth.Parser.parse(tokens)
     end
   end
 
@@ -182,8 +220,63 @@ defmodule ExExForthTest do
       """, mod_name)
       assert stack == [10]
     end
+
+    test "line comment ignored", %{mod_name: mod_name} do
+      stack = run_program("""
+      ex: + ( a b -- n ) [a, b | rest] = stack; [a + b | rest] ;
+      3 4 + \\ this should be 7
+      """, mod_name)
+      assert stack == [7]
+    end
+
+    test "1+ and 1-", %{mod_name: mod_name} do
+      stack = run_program("""
+      5 1+ 1-
+      """, mod_name)
+      assert stack == [5]
+    end
+
+    test "exit early return", %{mod_name: mod_name} do
+      stack = run_program("""
+      ex: <= ( a b -- bool ) [b, a | rest] = stack; [a <= b | rest] ;
+      ex: * ( a b -- n ) [a, b | rest] = stack; [a * b | rest] ;
+      ex: dup ( x -- x x ) [x | rest] = stack; [x, x | rest] ;
+      ex: drop ( x -- ) [_ | rest] = stack; rest ;
+      : factorial
+        dup 1 <= if drop 1 exit then
+        dup 1- factorial *
+      ;
+      5 factorial
+      """, mod_name)
+      assert stack == [120]
+    end
+
+    test "case_word", %{mod_name: mod_name} do
+      stack = run_program("""
+      : describe
+        0 -> "zero"
+        1 -> "one"
+        _ -> "many"
+      ;
+      1 describe
+      """, mod_name)
+      assert stack == ["one"]
+    end
+
+    test "var store and fetch", %{mod_name: mod_name} do
+      stack = run_program("""
+      ex: + ( a b -- n ) [a, b | rest] = stack; [a + b | rest] ;
+      var counter
+      0 counter!
+      counter@ 1+ counter!
+      counter@ 1+ counter!
+      counter@
+      """, mod_name)
+      assert stack == [2]
+    end
   end
-    describe "Quotations lexer/parser" do
+
+  describe "Quotations lexer/parser" do
     test "lexer tokenizes quot open/close" do
       {:ok, tokens, _, _, _, _} = ExForth.Lexer.tokenize("[ 1 + ]")
       assert tokens == [
@@ -240,11 +333,13 @@ defmodule ExExForthTest do
       assert stack == [4]
     end
   end
+
   describe "do_block" do
     setup do
       n = System.unique_integer([:positive])
       {:ok, mod_name: "TestMod#{n}"}
     end
+
     test "parser parses receive do" do
       {:ok, tokens, _, _, _, _} = ExForth.Lexer.tokenize("""
       receive do
@@ -252,10 +347,8 @@ defmodule ExExForthTest do
         _  -> "other" .
       end
       """)
-      assert [{:do_block, "receive",
-        [{"42", _}, {"_", _}],
-        []
-      }] = ExForth.Parser.parse(tokens)
+      assert [{:do_block, "receive", [{"42", _}, {"_", _}], []}] =
+        ExForth.Parser.parse(tokens)
     end
 
     test "parser parses receive do with after" do
@@ -266,30 +359,25 @@ defmodule ExExForthTest do
         5000 -> "timeout" .
       end
       """)
-      assert [{:do_block, "receive",
-        [{"42", _}],
-        [{"5000", _}]
-      }] = ExForth.Parser.parse(tokens)
+      assert [{:do_block, "receive", [{"42", _}], [{"5000", _}]}] =
+        ExForth.Parser.parse(tokens)
     end
+
     test "receive do with send", %{mod_name: mod_name} do
-      # компилируем модуль с receive
       {:ok, tokens, _, _, _, _} = ExForth.Lexer.tokenize("""
-      : wait ( -- msg ) receive do
-        _ -> .
+      : wait receive do
+        _ ->
       end ;
       """)
       parsed = ExForth.Parser.parse(tokens)
       code = ExForth.Translator.translate(parsed, mod_name)
       modules = Code.compile_string(code)
       {mod, _} = List.last(modules)
-
-      # запускаем процесс который вызовет wait
       parent = self()
       pid = spawn(fn ->
         apply(mod, :wait, [[]])
         send(parent, :done)
       end)
-
       send(pid, 42)
       assert_receive :done, 1000
     end

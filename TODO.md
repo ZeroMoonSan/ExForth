@@ -18,8 +18,10 @@ Inspired by Forth and Factor
 - [ ] step-by-step debugger
 - [ ] immediate words
 - [ ] float
+- [ ] REPL
 - [ ] regular expressions
 - [ ] string methods
 - [ ] Elixir lambdas
+- [ ] array
 - [ ] custom types/structs
 - [ ] GenServer/Agent/Task in ExForth

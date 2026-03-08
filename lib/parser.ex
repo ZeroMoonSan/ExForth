@@ -64,7 +64,13 @@ defmodule ExForth.Parser do
 
         {:user_decl, [name | body_tokens]} ->
           parsed_body = parse(body_tokens)
-          do_parse_seq(rest, [{:user_decl, [name | parsed_body]} | acc], stop?)
+          node = if all_clauses?(parsed_body) do
+            clauses = split_by_arrow(parsed_body)
+            {:case_word, name, clauses}
+          else
+            {:user_decl, [name | parsed_body]}
+          end
+          do_parse_seq(rest, [node | acc], stop?)
 
         other ->
           do_parse_seq(rest, [other | acc], stop?)
@@ -89,7 +95,6 @@ defmodule ExForth.Parser do
   defp block_stop?({:kw, :kw_after}), do: true
   defp block_stop?(_),                 do: false
 
-  # разбиваем плоский список по -> на [{pattern_str, body}, ...]
   defp split_by_arrow(tokens) do
     indices = tokens
       |> Enum.with_index()
@@ -98,7 +103,7 @@ defmodule ExForth.Parser do
 
     Enum.map(indices, fn arrow_i ->
       pattern = Enum.at(tokens, arrow_i - 1)
-      next_arrow = Enum.find(indices, length(tokens), &(&1 > arrow_i))
+      next_arrow = Enum.find(indices, length(tokens) + 1, &(&1 > arrow_i))
       body = Enum.slice(tokens, (arrow_i + 1)..(next_arrow - 2)//1)
       {token_to_pattern(pattern), body}
     end)
@@ -122,4 +127,16 @@ defmodule ExForth.Parser do
   defp loop_stop?(_),               do: false
   defp quot_stop?({:kw, :kw_quot_close}), do: true
   defp quot_stop?(_), do: false
+  defp all_clauses?(body) do
+    has_arrows = Enum.any?(body, &(&1 == {:kw, :kw_arrow}))
+    has_control = Enum.any?(body, fn
+      {:kw, kw} -> kw in [:kw_if, :kw_begin, :kw_do, :kw_quot_open]
+      {:if, _, _} -> true
+      {:do_loop, _} -> true
+      {:begin_until, _} -> true
+      {:quot, _} -> true
+      _ -> false
+    end)
+    has_arrows and not has_control
+  end
 end

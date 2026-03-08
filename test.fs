@@ -1,5 +1,5 @@
-use core
-use math
+use flib/core
+use flib/math
 
 var x
 

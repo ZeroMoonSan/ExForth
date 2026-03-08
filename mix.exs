@@ -11,14 +11,15 @@ defmodule Exforth.MixProject do
       name: "ExForth",
       description: "A transpiler from a Forth dialect to Elixir AST",
       package: package(),
-      docs: docs()
+      docs: docs(),
+      elixirc_options: [warnings_as_errors: false],
     ]
   end
 
-  # Library configuration (not an application)
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger],
+      # mod: {ExForth.App, []}
     ]
   end
 
@@ -33,7 +34,7 @@ defmodule Exforth.MixProject do
   defp package do
     [
       files: ["lib", "core.fs", "math.fs", "README.md", "LICENSE"],
-      maintainers: ["Your Name"],
+      maintainers: ["ZeroMoonSan"],
       licenses: ["MIT"],
       links: %{github: "https://github.com/ZeroMoonSan/ExForth"}
     ]
@@ -41,11 +42,9 @@ defmodule Exforth.MixProject do
 
   defp docs do
     [
-      main: "ExForth",
+      main: "ExForth.App",
       extras: [
         "README.md",
-        "core.fs",
-        "math.fs"
       ]
     ]
   end

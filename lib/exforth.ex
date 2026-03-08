@@ -1,14 +1,3 @@
-defmodule Cfg do
-  @moduledoc """
-  Configuration helper for ExForth runtime settings.
-
-  Provides convenient access to application environment variables
-  for customizing ExForth behavior.
-  """
-  def get(key), do: Application.get_env(:exforth, key)
-  def put(key, val), do: Application.put_env(:exforth, key, val)
-end
-
 defmodule ExForth.App do
   @moduledoc """
   Application callback module for ExForth.
@@ -29,7 +18,7 @@ defmodule ExForth.App do
     children = [
       ExForth.Vars,
       ExForth.Cache,
-      FLoader,
+      ExForth.FLoader,
     ]
     opts = [strategy: :one_for_one, name: ExForth.Supervisor]
     Supervisor.start_link(children, opts)

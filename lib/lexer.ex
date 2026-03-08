@@ -25,15 +25,19 @@ defmodule ExForth.Lexer do
     |> ignore()
 
   name =
-  ascii_string([?a..?z, ?A..?Z, ?_, ?+, ?-, ?*, ?/, ?., ?^, ?<, ?>, ?=, ?!, ?@], min: 1)
+    ascii_string([?a..?z, ?A..?Z, ?_, ?+, ?-, ?*, ?/, ?., ?^, ?<, ?>, ?=, ?!, ?@], min: 1)
 
   path =
     ascii_string([?a..?z, ?A..?Z, ?0..?9, ?_, ?., ?/], min: 1)
 
-  comment =
+  paren_comment =
     ignore(string("("))
     |> ignore(ascii_string([not: ?)], min: 0))
     |> ignore(string(")"))
+
+  line_comment =
+    ignore(string("\\"))
+    |> ignore(utf8_string([not: ?\n], min: 0))
 
   number =
     optional(string("-"))
@@ -62,7 +66,7 @@ defmodule ExForth.Lexer do
     |> ignore(choice([string("\n"), eos()]))
     |> unwrap_and_tag(:var)
 
-  # { a b c } локальные переменные
+  # { a b c } local vars
   locals =
     ignore(string("{"))
     |> ignore(optional(whitespace))
@@ -73,18 +77,22 @@ defmodule ExForth.Lexer do
     |> ignore(string("}"))
     |> tag(:locals)
 
-  # ключевые слова как отдельные токены
+  # keywords as separate tokens
   keyword =
     choice([
       string("if")    |> replace(:kw_if),
       string("else")  |> replace(:kw_else),
       string("end")   |> replace(:kw_end),
+      string("then") |> replace(:kw_end),
       string("do")    |> replace(:kw_do),
       string("loop")  |> replace(:kw_loop),
       string("begin") |> replace(:kw_begin),
       string("until") |> replace(:kw_until),
       string("->")    |> replace(:kw_arrow),
       string("after") |> replace(:kw_after),
+      string("exit") |> replace(:kw_exit),
+      string("1+") |> replace(:kw_inc),
+      string("1-") |> replace(:kw_dec),
     ])
     |> lookahead(choice([ascii_string([?\s, ?\n, ?\t, ?\r, ?;], min: 1), eos()]))
     |> unwrap_and_tag(:kw)
@@ -100,17 +108,18 @@ defmodule ExForth.Lexer do
     name
     |> unwrap_and_tag(:call)
 
-  # тело user_decl до ";"
   body =
     repeat(
       lookahead_not(string(";"))
       |> choice([
         ignore(whitespace),
+        keyword,
         number,
         str,
         locals,
-        keyword,
-        bracket,   # <- добавь
+        bracket,
+        paren_comment,
+        line_comment,
         call
       ])
     )
@@ -120,7 +129,7 @@ defmodule ExForth.Lexer do
     |> ignore(whitespace)
     |> concat(name)
     |> ignore(whitespace)
-    |> ignore(comment)
+    |> ignore(paren_comment)
     |> ignore(whitespace)
     |> utf8_string([not: ?\n], min: 0)
     |> ignore(string("\n"))
@@ -130,43 +139,28 @@ defmodule ExForth.Lexer do
     ignore(string(":"))
     |> ignore(whitespace)
     |> concat(name)
-    |> ignore(whitespace)
-    |> ignore(comment)
+    |> ignore(optional(whitespace))
+    |> ignore(optional(paren_comment))
     |> ignore(optional(whitespace))
     |> concat(body)
     |> ignore(optional(whitespace))
     |> ignore(string(";"))
     |> tag(:user_decl)
 
-  # [ tokens ] -> {:quot, tokens}
-  quot =
-    ignore(string("["))
-    |> ignore(optional(whitespace))
-    |> repeat(
-      lookahead_not(string("]"))
-      |> choice([
-        ignore(whitespace),
-        number,
-        str,
-        keyword,
-        call
-      ])
-    )
-    |> ignore(string("]"))
-    |> tag(:quot)
-
   defparsec :tokenize,
     repeat(
       choice([
         ignore(whitespace),
+        line_comment,
         native_decl,
         user_decl,
         use_decl,
         var_decl,
+        keyword,
         number,
         str,
-        keyword,
-        bracket,   # <- добавь
+        bracket,
+        paren_comment,
         call
       ])
     )

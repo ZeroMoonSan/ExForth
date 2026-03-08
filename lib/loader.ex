@@ -1,4 +1,4 @@
-defmodule FLoader do
+defmodule ExForth.FLoader do
   @moduledoc """
   GenServer for loading and compiling ExForth source files.
 
@@ -10,7 +10,7 @@ defmodule FLoader do
   use GenServer
   require Logger
 
-  def start_link(opts \\ []) do
+  def start_link(_opts \\ []) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
@@ -43,7 +43,7 @@ defmodule FLoader do
 
     elixir_code = ExForth.Translator.translate(tokens, mod_name)
     Logger.debug("Generated code:\n#{elixir_code}")
-
+    
     Code.compile_string(elixir_code)
     ExForth.Cache.mark_compiled(path)
     {:ok, mod_name}
@@ -64,6 +64,6 @@ defmodule FLoader do
       |> Path.basename()
       |> String.replace_suffix(".fs", "")
       |> Macro.camelize()
-    "FLoader.Scripts.#{name}"
+    "ExForth.FLoader.Scripts.#{name}"
   end
 end
