@@ -141,15 +141,27 @@ Insert raw Elixir directly into the generated module or word body:
 
 Define Elixir pattern-matching functions directly:
 ```forth
-ex: dup ( x -- x x ) [x | rest] = stack; [x, x | rest] ;
-ex: + ( a b -- n ) [a, b | rest] = stack; [a + b | rest] ;
-ex: . ( x -- ) [x | rest] = stack; (IO.puts(x); rest) ;
+ex: dup ( x -- x x )
+  [x | rest] = stack
+  [x, x | rest]
+ex;
+
+ex: + ( a b -- n )
+  [a, b | rest] = stack
+  [a + b | rest]
+ex;
+
+ex: . ( x -- )
+  [x | rest] = stack
+  IO.puts(x)
+  rest
+ex;
 ```
 
 ## Architecture
 ```
 ┌─────────────────────────────────────────┐
-│            FLoader (GenServer)          │
+│            ExForth.FLoader (GenServet)  │
 │  - Loads .fs files                      │
 │  - Manages dependencies                 │
 │  - Caches compiled modules              │

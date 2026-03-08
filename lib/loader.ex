@@ -28,6 +28,20 @@ defmodule ExForth.FLoader do
     end
   end
 
+  def load_string(source, mod_name) do
+    {:ok, raw_tokens, _, _, _, _} = ExForth.Lexer.tokenize(source)
+    tokens = ExForth.Parser.parse(raw_tokens)
+    
+    for {:use, dep_path} <- tokens do
+      dep_path |> resolve_path() |> load()
+    end
+
+    code = ExForth.Translator.translate(tokens, mod_name)
+    modules = Code.compile_string(code)
+    {mod, _} = List.last(modules)
+    apply(mod, :exec, [])
+  end
+
   defp do_load(path) do
     source_code = File.read!(path)
     mod_name    = path_to_mod(path)

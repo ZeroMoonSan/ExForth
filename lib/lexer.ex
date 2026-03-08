@@ -145,23 +145,12 @@ defmodule ExForth.Lexer do
 
   native_body =
     repeat(
-      lookahead_not(string("\n;"))
+      lookahead_not(string("ex;"))
       |> utf8_char([])
     )
     |> reduce({List, :to_string, []})
 
-  native_decl_single =
-    ignore(string("ex:"))
-    |> ignore(whitespace)
-    |> concat(name)
-    |> ignore(optional(utf8_string([?\s, ?\t], min: 1)))
-    |> ignore(optional(paren_comment))
-    |> ignore(optional(utf8_string([?\s, ?\t], min: 1)))
-    |> utf8_string([not: ?\n], min: 1)
-    |> ignore(choice([string("\n"), eos()]))
-    |> tag(:native_decl)
-
-  native_decl_multi =
+  native_decl =
     ignore(string("ex:"))
     |> ignore(whitespace)
     |> concat(name)
@@ -169,11 +158,9 @@ defmodule ExForth.Lexer do
     |> ignore(optional(paren_comment))
     |> ignore(optional(utf8_string([?\s, ?\t, ?\n, ?\r], min: 1)))
     |> concat(native_body)
-    |> ignore(string("\n;"))
+    |> ignore(string("ex;"))
     |> ignore(optional(string("\n")))
     |> tag(:native_decl)
-
-  native_decl = choice([native_decl_single, native_decl_multi])
 
   user_decl =
     ignore(string(":"))

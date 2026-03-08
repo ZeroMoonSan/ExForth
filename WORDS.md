@@ -41,9 +41,10 @@
 * `>` ( a b -- flag ) – greater than
 * `=` ( a b -- flag ) – equal
 * `<=` ( a b -- flag ) – less than or equal
+* `.` ( x -- ) – print x
+* `puts` ( x -- ) – print x
 
 ## math.fs
-* `.` ( x -- ) – print x
 * `+` ( a b -- n ) – add
 * `-` ( a b -- n ) – subtract (a - b)
 * `*` ( a b -- n ) – multiply
